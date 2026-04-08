@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Restaurant Menu</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #f5f3ee;
+      color: #1a1a18;
+      min-height: 100vh;
+    }
+
+    /* ── Hero Header ── */
+    .hero {
+      background: #1a1208;
+      padding: 2rem 1.5rem 1.75rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: -50px; right: -50px;
+      width: 180px; height: 180px;
+      border-radius: 50%;
+      background: rgba(201,152,58,0.12);
+    }
+    .hero-badge {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #c9983a;
+      font-weight: 500;
+      margin-bottom: 0.4rem;
+    }
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 30px;
+      font-weight: 600;
+      color: #f5edd8;
+      line-height: 1.15;
+      margin-bottom: 0.35rem;
+    }
+    .hero-tagline {
+      font-size: 13px;
+      color: #9a8870;
+      margin-bottom: 1.25rem;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 1.25rem;
+      font-size: 12px;
+      color: #7a6e5e;
+      align-items: center;
+    }
+    .badge-open {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: #5cba84;
+    }
+    .dot-green {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #3db87a;
+      display: inline-block;
+    }
+
+    /* ── Category Filter ── */
+    .cat-bar {
+      background: #fff;
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      border-bottom: 1px solid #ece9e0;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .cat-bar::-webkit-scrollbar { display: none; }
+
+    .cat-btn {
+      flex-shrink: 0;
+      padding: 6px 16px;
+      border-radius: 20px;
+      border: 1px solid #ddd9ce;
+      background: transparent;
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      color: #6b6860;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .cat-btn.active {
+      background: #1a1208;
+      color: #f5edd8;
+      border-color: #1a1208;
+    }
+
+    /* ── Section Label ── */
+    .section-label {
+      padding: 1.25rem 1.5rem 0.5rem;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #9a9690;
+      font-weight: 500;
+    }
+
+    /* ── Menu Items ── */
+    .items-list {
+      padding: 0 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 1rem;
+    }
+
+    .item-card {
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid #ece9e0;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: border-color 0.15s;
+    }
+    .item-card:hover { border-color: #c9b898; }
+
+    .item-icon {
+      width: 58px; height: 58px;
+      border-radius: 12px;
+      background: #f5f3ee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      flex-shrink: 0;
+    }
+
+    .item-info { flex: 1; min-width: 0; }
+
+    .item-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1a1208;
+      margin-bottom: 3px;
+    }
+    .item-desc {
+      font-size: 12px;
+      color: #7a7670;
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .item-tags {
+      display: flex;
+      gap: 5px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .tag {
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .tag-veg    { background: #e8f5e2; color: #2d6e1a; }
+    .tag-nonveg { background: #fdecea; color: #922020; }
+    .tag-spicy  { background: #fdeee6; color: #8a3010; }
+    .tag-popular{ background: #fef3dd; color: #7a4e0a; }
+
+    .item-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .item-price {
+      font-size: 15px;
+      font-weight: 500;
+      color: #1a1208;
+    }
+    .add-btn {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: #1a1208;
+      color: #f5edd8;
+      border: none;
+      font-size: 20px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: transform 0.1s, background 0.15s;
+    }
+    .add-btn:hover  { background: #3a2e18; }
+    .add-btn:active { transform: scale(0.88); }
+
+    /* ── Cart Bar ── */
+    .cart-bar {
+      position: fixed;
+      bottom: 1.25rem;
+      left: 1.25rem;
+      right: 1.25rem;
+      background: #1a1208;
+      color: #f5edd8;
+      padding: 14px 20px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.2s;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+    }
+    .cart-bar.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(12px);
+    }
+    .cart-badge {
+      background: #c9983a;
+      color: #1a1208;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 500;
+      margin-right: 8px;
+    }
+    .cart-total { font-weight: 500; font-size: 14px; }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      padding: 2rem 1.5rem 5rem;
+      font-size: 12px;
+      color: #b0ac9e;
+    }
+
+    /* ── Section visibility ── */
+    .menu-section { margin-bottom: 0.5rem; }
+    .menu-section.hidden { display: none; }
+  </style>
+</head>
+
+<body>
+
+  <!-- ═══ HERO HEADER ═══ -->
+  <!-- 
+    CUSTOMISE HERE:
+    - Change "Spice Garden" to your restaurant's name
+    - Change "Authentic North Indian Cuisine" to the cuisine type
+    - Change "Est. 2018 · Jaipur" to the correct year and city
+    - Change "11am – 11pm" to the correct hours
+    - Change "Table 4" to be dynamic later (from the URL)
+  -->
+  <div class="hero">
+    <div class="hero-badge">Est. 2018 · Jaipur</div>
+    <h1>Spice Garden</h1>
+    <p class="hero-tagline">Authentic North Indian Cuisine</p>
+    <div class="hero-meta">
+      <span class="badge-open"><span class="dot-green"></span> Open now</span>
+      <span>11am – 11pm</span>
+      <span id="table-label">Table 4</span>
+    </div>
+  </div>
+
+  <!-- ═══ CATEGORY FILTER BAR ═══ -->
+  <div class="cat-bar">
+    <button class="cat-btn active" onclick="filterCategory('all', this)">All</button>
+    <button class="cat-btn" onclick="filterCategory('starters', this)">Starters</button>
+    <button class="cat-btn" onclick="filterCategory('mains', this)">Mains</button>
+    <button class="cat-btn" onclick="filterCategory('breads', this)">Breads & Rice</button>
+    <button class="cat-btn" onclick="filterCategory('drinks', this)">Drinks</button>
+    <button class="cat-btn" onclick="filterCategory('desserts', this)">Desserts</button>
+  </div>
+
+  <!-- ═══ MENU SECTIONS ═══ -->
+  <main>
+
+    <!-- STARTERS -->
+    <section class="menu-section" id="sec-starters">
+      <div class="section-label">Starters</div>
+      <div class="items-list">
+
+        <div class="item-card">
+          <div class="item-icon">🥗</div>
+          <div class="item-info">
+            <div class="item-name">Paneer Tikka</div>
+            <div class="item-desc">Chunks of fresh cottage cheese marinated in spiced yogurt, grilled in a tandoor oven</div>
+            <div class="item-tags">
+              <span class="tag tag-veg">Veg</span>
+              <span class="tag tag-popular">Popular</span>
+            </div>
+          </div>
+          <div class="item-right">
+            <div class="item-price">₹220</div>
+            <button class="add-btn" onclick="addToCart('Paneer Tikka', 220)">+</button>
+          </div>
+        </div>
+
+        <div class="item-card">
+          <div class="item-icon">🍗</div>
+          <div class="item-info">
+            <div class="item-name">Chicken 65</div>
+            <div class="item-desc">Deep fried chicken tossed with curry leaves, green chilli, and South Indian spices</div>
+            <div class="item-tags">
+              <span class="tag tag-nonveg">Non-veg</span>
+              <span class="tag tag-spicy">Spicy</span>
+            </div>
+          </div>
+          <div class="item-right">
+            <div class="item-price">₹280</div>
+            <button class="add-btn" onclick="addToCart('Chicken 65', 280)">+</button>
+          </div>
+        </div>
+
+        <div class="item-card">
+          <div class="item-icon">🧅</div>
+          <div class="item-info">
+            <div class="item-name">Onion Bhaji</div>
+            <div class="item-desc">Crispy fried onion fritters with coriander chutney on the side</div>
+            <div class="item-tags">
+              <span class="tag tag-veg">Veg</span>
+            </div>
+          </div>
+          <div class="item-right">
+            <div class="item-price">₹140</div>
+            <button class="add-btn" onclick="addToCart('Onion Bhaji', 140)">+</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- MAINS -->
+    <section class="menu-section" id="sec-mains">
+      <div class="section-label">Mains</div>
+      <div class="items-list">
+
+        <div class="item-card">
+          <div class="item-icon">🍛</div>
+          <div class="item-info">
+            <div class="item-name">Dal Makhani</div>
+            <div class="item-desc">Black lentils slow-cooked overnight with butter, cream, and a rich tomato base</div>
+            <div class="item-tags">
+              <span class="tag tag-veg">Veg</span>
+              <span class="tag tag-popular">Popular</span>
+            </div>
+          </div>
+          <div class="item-right">
+            <div class="item-price">₹320</div>
+            <button class="add-btn" onclick="addToCart('Dal Makhani', 320)">+</button>
+          </div>
+        </div>
+
+        <div class="item-card">
+          <div class="item-icon">🍖</div>
+          <div class="item-info">
+            <div class="item-name">Butter Chicken</div>
+            <div class="item-desc">Tender chicken in a velvety tomato and cream gravy, mild and aromatic</div>
+            <div class="item-tags">
+              <span class="tag tag-nonveg">Non-veg</span>
+              <span class="tag tag-popular">Popular</span>
+            </div>
+          </div>
+          <div class="item-right">
+            <div class="item-price">₹380</div>
+            <button class="add-btn" onclick="addToCart('Butter Chicken', 380)">+</button>
+          </div>
+        </div>
+
+        <div class="item-card">
+          <div class="item-icon">🥘</div>
+          <div class="item-info">
+            <div class="item-name">Palak Paneer</div>
+            <div class="item-desc">Fresh cottage cheese in a smooth, spiced spinach gravy</div>
+            <div class="item-tags">
+              <span class="tag tag-veg">Veg</span>
+            </div>
+          </div>
+          <div class="item-right">
+            <div class="item-price">₹300</div>
+            <button class="add-btn" onclick="addToCart('Palak Paneer', 300)">+</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- BREADS & RICE -->
+    <section class="menu-section" id="sec-breads">
+      <div class="section-label">Breads &amp; Rice</div>
+      <div class="items-list">
+
+        <div class="item-card">
+          <div class="item-icon">🫓</div>
+          <div class="item-info">
+            <div class="item-name">Garlic Naan</div>
+            <div class="item-desc">Freshly baked in tandoor, topped with garlic and butter</div>
+            <div class="item-tags">
+              <span class="tag tag-veg">Veg</span>
+              <span class="tag tag-popular">Popular</span>
+            </div>
+          </div>
+          <div class="item-right">
+            <div class="item-price">₹60</div>
+            <button class="add-btn" onclick="addToCart('Garlic Naan', 60)">+</button>
+          </div>
+        </div>
+
+        <div class="item-card">
+          <div class="item-icon">🍚</div>
+          <div class="item-info">
+            <div class="item-name">Jeera Rice</div>
+            <div class="item-desc">Long-grain basmati rice tempered with cumin and ghee</div>
+            <div class="item-tags">
+              <span class="tag tag-veg">Veg</span>
+            </div>
+          </div>
+          <div class="item-right">
+            <div class="item-price">₹120</div>
+            <button class="add-btn" onclick="addToCart('Jeera Rice', 120)">+</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- DRINKS -->
+    <section class="menu-section" id="sec-drinks">
+      <div class="section-label">Drinks</div>
+      <div class="items-list">
+
+        <div class="item-card">
+          <div class="item-icon">🥛</div>
+          <div class="item-info">
+            <div class="item-name">Mango Lassi</div>
+            <div class="item-desc">Thick chilled lassi blended with fresh Alphonso mango pulp</div>
+            <div class="item-tags">
+              <span class="tag tag-veg">Veg</span>
+              <span class="tag tag-popular">Popular</span>
+            </div>
+          </div>
+          <div class="item-right">
+            <div class="item-price">₹120</div>
+            <button class="add-btn" onclick="addToCart('Mango Lassi', 120)">+</button>
+          </div>
+        </div>
+
+        <div class="item-card">
+          <div class="item-icon">🍋</div>
+          <div class="item-info">
+            <div class="item-name">Nimbu Pani</div>
+            <div class="item-desc">Fresh lime water with black salt, cumin, and mint — the classic</div>
+            <div class="item-tags">
+              <span class="tag tag-veg">Veg</span>
+            </div>
+          </div>
+          <div class="item-right">
+            <div class="item-price">₹60</div>
+            <button class="add-btn" onclick="addToCart('Nimbu Pani', 60)">+</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- DESSERTS -->
+    <section class="menu-section" id="sec-desserts">
+      <div class="section-label">Desserts</div>
+      <div class="items-list">
+
+        <div class="item-card">
+          <div class="item-icon">🍮</div>
+          <div class="item-info">
+            <div class="item-name">Gulab Jamun</div>
+            <div class="item-desc">Soft milk-solid dumplings soaked in warm rose-flavoured sugar syrup</div>
+            <div class="item-tags">
+              <span class="tag tag-veg">Veg</span>
+              <span class="tag tag-popular">Popular</span>
+            </div>
+          </div>
+          <div class="item-right">
+            <div class="item-price">₹90</div>
+            <button class="add-btn" onclick="addToCart('Gulab Jamun', 90)">+</button>
+          </div>
+        </div>
+
+        <div class="item-card">
+          <div class="item-icon">🍨</div>
+          <div class="item-info">
+            <div class="item-name">Kulfi</div>
+            <div class="item-desc">Traditional Indian ice cream with pistachio and saffron</div>
+            <div class="item-tags">
+              <span class="tag tag-veg">Veg</span>
+            </div>
+          </div>
+          <div class="item-right">
+            <div class="item-price">₹100</div>
+            <button class="add-btn" onclick="addToCart('Kulfi', 100)">+</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div class="footer">
+    Powered by QRMenu · <a href="#" style="color:#c9983a; text-decoration:none;">qrmenu.in</a>
+  </div>
+
+  <!-- ═══ FLOATING CART BAR ═══ -->
+  <div class="cart-bar hidden" id="cart-bar">
+    <div>
+      <span class="cart-badge" id="cart-count">0</span>
+      <span id="cart-text">items in cart</span>
+    </div>
+    <div class="cart-total" id="cart-total">₹0 &nbsp;·&nbsp; View order</div>
+  </div>
+
+
+  <!-- ═══ JAVASCRIPT ═══ -->
+  <script>
+
+    // ── Cart Logic ──
+    let cartCount = 0;
+    let cartTotal = 0;
+
+    function addToCart(name, price) {
+      cartCount++;
+      cartTotal += price;
+
+      // Update cart bar
+      document.getElementById('cart-count').textContent = cartCount;
+      document.getElementById('cart-text').textContent = cartCount === 1 ? 'item in cart' : 'items in cart';
+      document.getElementById('cart-total').textContent = '₹' + cartTotal + ' · View order';
+      document.getElementById('cart-bar').classList.remove('hidden');
+    }
+
+    // ── Category Filter Logic ──
+    function filterCategory(cat, clickedBtn) {
+      // Update active button style
+      document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
+      clickedBtn.classList.add('active');
+
+      // Show/hide sections
+      const sections = {
+        starters: document.getElementById('sec-starters'),
+        mains:    document.getElementById('sec-mains'),
+        breads:   document.getElementById('sec-breads'),
+        drinks:   document.getElementById('sec-drinks'),
+        desserts: document.getElementById('sec-desserts'),
+      };
+
+      Object.entries(sections).forEach(([key, el]) => {
+        if (cat === 'all' || cat === key) {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+    }
+
+    // ── Read table number from URL ──
+    // When the QR code URL is: yourdomain.com?table=5
+    // this code reads that and shows "Table 5" in the header
+    const params = new URLSearchParams(window.location.search);
+    const table = params.get('table');
+    if (table) {
+      document.getElementById('table-label').textContent = 'Table ' + table;
+    }
+
+  </script>
+
+</body>
+</html>
