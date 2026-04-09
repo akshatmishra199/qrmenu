@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QRMenu Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: #f5f3ee; color: #1a1a18; min-height: 100vh; }
+
+    /* ── Top Nav ── */
+    .topnav { background: #1a1208; padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .topnav-brand { font-size: 15px; font-weight: 500; color: #f5edd8; letter-spacing: .02em; }
+    .topnav-brand span { color: #c9983a; }
+    .topnav-user { font-size: 12px; color: #7a6e5e; }
+
+    /* ── Layout ── */
+    .layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 56px); }
+
+    /* ── Sidebar ── */
+    .sidebar { background: #fff; border-right: 1px solid #ece9e0; padding: 1.5rem 0; }
+    .sidebar-label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #b0ac9e; padding: 0 1.25rem; margin-bottom: .5rem; margin-top: 1rem; }
+    .sidebar-link { display: block; padding: 9px 1.25rem; font-size: 13px; color: #5a5850; cursor: pointer; border-left: 2px solid transparent; transition: all .15s; text-decoration: none; }
+    .sidebar-link:hover { background: #f5f3ee; color: #1a1208; }
+    .sidebar-link.active { background: #fef9f0; color: #1a1208; border-left-color: #c9983a; font-weight: 500; }
+
+    /* ── Main ── */
+    .main { padding: 2rem; max-width: 860px; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── Page Header ── */
+    .page-header { margin-bottom: 1.75rem; }
+    .page-title { font-size: 20px; font-weight: 500; color: #1a1208; margin-bottom: 4px; }
+    .page-sub   { font-size: 13px; color: #7a7670; }
+
+    /* ── Cards ── */
+    .card { background: #fff; border-radius: 14px; border: 1px solid #ece9e0; padding: 1.5rem; margin-bottom: 1.25rem; }
+    .card-title { font-size: 14px; font-weight: 500; color: #1a1208; margin-bottom: 1rem; padding-bottom: .75rem; border-bottom: 1px solid #f0ede6; }
+
+    /* ── Form ── */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-grid.full { grid-template-columns: 1fr; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 12px; color: #7a7670; font-weight: 500; }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 9px 12px;
+      border-radius: 8px;
+      border: 1px solid #ddd9ce;
+      background: #fff;
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      color: #1a1208;
+      outline: none;
+      transition: border-color .15s;
+      width: 100%;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: #c9983a; }
+    .form-group textarea { resize: vertical; min-height: 70px; }
+
+    .checkbox-row { display: flex; gap: 1.5rem; margin-top: 4px; }
+    .checkbox-row label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #5a5850; cursor: pointer; }
+    .checkbox-row input[type=checkbox] { width: 15px; height: 15px; accent-color: #c9983a; cursor: pointer; }
+
+    /* ── Buttons ── */
+    .btn { padding: 9px 20px; border-radius: 8px; border: none; font-size: 13px; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; transition: all .15s; }
+    .btn-primary { background: #1a1208; color: #f5edd8; }
+    .btn-primary:hover { background: #3a2e18; }
+    .btn-primary:active { transform: scale(.98); }
+    .btn-danger  { background: #fdecea; color: #922020; border: 1px solid #f5c4c4; }
+    .btn-danger:hover { background: #f9d4d4; }
+    .btn-outline { background: transparent; color: #1a1208; border: 1px solid #ddd9ce; }
+    .btn-outline:hover { background: #f5f3ee; }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+    .btn-row { display: flex; gap: 8px; margin-top: 1.25rem; align-items: center; }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: #1a1208; color: #f5edd8; padding: 12px 20px; border-radius: 10px; font-size: 13px; opacity: 0; transform: translateY(8px); transition: all .25s; pointer-events: none; z-index: 999; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: #1a4a2a; }
+    .toast.error   { background: #4a1a1a; }
+
+    /* ── Restaurant list ── */
+    .restaurant-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f0ede6; gap: 12px; }
+    .restaurant-item:last-child { border-bottom: none; }
+    .restaurant-name  { font-size: 14px; font-weight: 500; color: #1a1208; }
+    .restaurant-meta  { font-size: 12px; color: #9a9690; margin-top: 2px; }
+    .restaurant-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    /* ── Menu item list ── */
+    .menu-item-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0ede6; }
+    .menu-item-row:last-child { border-bottom: none; }
+    .menu-item-emoji { font-size: 20px; width: 32px; text-align: center; flex-shrink: 0; }
+    .menu-item-info  { flex: 1; min-width: 0; }
+    .menu-item-name  { font-size: 13px; font-weight: 500; color: #1a1208; }
+    .menu-item-meta  { font-size: 11px; color: #9a9690; margin-top: 1px; }
+    .menu-item-price { font-size: 13px; font-weight: 500; color: #1a1208; flex-shrink: 0; }
+
+    /* ── QR section ── */
+    .qr-box { background: #f5f3ee; border-radius: 12px; padding: 1.5rem; text-align: center; }
+    .qr-url { font-size: 12px; color: #7a7670; word-break: break-all; margin: .75rem 0; background: #fff; padding: 10px 14px; border-radius: 8px; border: 1px solid #ece9e0; text-align: left; font-family: monospace; }
+    .qr-img-wrap { margin: 1rem auto; width: 160px; height: 160px; background: #fff; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid #ece9e0; overflow: hidden; }
+    .qr-img-wrap img { width: 140px; height: 140px; }
+
+    /* ── Stats ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.25rem; }
+    .stat-card { background: #fff; border-radius: 12px; border: 1px solid #ece9e0; padding: 1rem 1.25rem; }
+    .stat-label { font-size: 11px; color: #9a9690; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+    .stat-value { font-size: 24px; font-weight: 500; color: #1a1208; }
+
+    /* ── Empty state ── */
+    .empty { text-align: center; padding: 2.5rem 1rem; color: #9a9690; font-size: 13px; }
+    .empty-icon { font-size: 32px; margin-bottom: .5rem; }
+
+    /* ── Select restaurant dropdown ── */
+    .select-restaurant-bar { background: #fff; border: 1px solid #ece9e0; border-radius: 10px; padding: .75rem 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+    .select-restaurant-bar label { color: #7a7670; white-space: nowrap; }
+    .select-restaurant-bar select { flex: 1; border: none; outline: none; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #1a1208; background: transparent; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <!-- Top Nav -->
+  <div class="topnav">
+    <div class="topnav-brand">QR<span>Menu</span> · Admin</div>
+    <div class="topnav-user">Management Panel</div>
+  </div>
+
+  <div class="layout">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-label">Menu</div>
+      <a class="sidebar-link active" onclick="showPage('dashboard', this)">Dashboard</a>
+      <a class="sidebar-link" onclick="showPage('restaurants', this)">Restaurants</a>
+      <a class="sidebar-link" onclick="showPage('menu-items', this)">Menu Items</a>
+      <a class="sidebar-link" onclick="showPage('qr-codes', this)">QR Codes</a>
+    </div>
+
+    <!-- Main content -->
+    <div class="main">
+
+      <!-- ══ DASHBOARD ══ -->
+      <div class="page active" id="page-dashboard">
+        <div class="page-header">
+          <div class="page-title">Dashboard</div>
+          <div class="page-sub">Overview of your QRMenu business</div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">Restaurants</div><div class="stat-value" id="stat-restaurants">—</div></div>
+          <div class="stat-card"><div class="stat-label">Menu Items</div><div class="stat-value" id="stat-items">—</div></div>
+          <div class="stat-card"><div class="stat-label">QR Codes</div><div class="stat-value" id="stat-qr">—</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Your restaurants</div>
+          <div id="dashboard-list"><div class="empty"><div class="empty-icon">🍽️</div>No restaurants yet. Add your first one!</div></div>
+        </div>
+      </div>
+
+      <!-- ══ RESTAURANTS ══ -->
+      <div class="page" id="page-restaurants">
+        <div class="page-header">
+          <div class="page-title">Restaurants</div>
+          <div class="page-sub">Add and manage restaurants on your platform</div>
+        </div>
+
+        <!-- Add restaurant form -->
+        <div class="card">
+          <div class="card-title">Add a new restaurant</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Restaurant name *</label>
+              <input type="text" id="r-name" placeholder="e.g. Spice Garden" />
+            </div>
+            <div class="form-group">
+              <label>City *</label>
+              <input type="text" id="r-city" placeholder="e.g. Jaipur" />
+            </div>
+            <div class="form-group">
+              <label>Tagline</label>
+              <input type="text" id="r-tagline" placeholder="e.g. Authentic North Indian Cuisine" />
+            </div>
+            <div class="form-group">
+              <label>Open hours</label>
+              <input type="text" id="r-hours" placeholder="e.g. 11am – 11pm" />
+            </div>
+            <div class="form-group">
+              <label>Established</label>
+              <input type="text" id="r-est" placeholder="e.g. Est. 2019" />
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="addRestaurant()">Add restaurant</button>
+          </div>
+        </div>
+
+        <!-- Restaurant list -->
+        <div class="card">
+          <div class="card-title">All restaurants</div>
+          <div id="restaurant-list"><div class="empty"><div class="empty-icon">🏪</div>No restaurants added yet.</div></div>
+        </div>
+      </div>
+
+      <!-- ══ MENU ITEMS ══ -->
+      <div class="page" id="page-menu-items">
+        <div class="page-header">
+          <div class="page-title">Menu Items</div>
+          <div class="page-sub">Add dishes to a restaurant's menu</div>
+        </div>
+
+        <!-- Select restaurant -->
+        <div class="select-restaurant-bar">
+          <label>Restaurant:</label>
+          <select id="item-restaurant-select" onchange="loadMenuItems()">
+            <option value="">— Select a restaurant —</option>
+          </select>
+        </div>
+
+        <!-- Add item form -->
+        <div class="card">
+          <div class="card-title">Add a menu item</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Dish name *</label>
+              <input type="text" id="i-name" placeholder="e.g. Butter Chicken" />
+            </div>
+            <div class="form-group">
+              <label>Price (₹) *</label>
+              <input type="number" id="i-price" placeholder="e.g. 380" />
+            </div>
+            <div class="form-group">
+              <label>Category *</label>
+              <select id="i-category">
+                <option value="starters">Starters</option>
+                <option value="mains">Mains</option>
+                <option value="breads">Breads & Rice</option>
+                <option value="drinks">Drinks</option>
+                <option value="desserts">Desserts</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Emoji</label>
+              <input type="text" id="i-emoji" placeholder="e.g. 🍛" maxlength="4" />
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label>Description</label>
+              <textarea id="i-desc" placeholder="Describe the dish briefly..."></textarea>
+            </div>
+          </div>
+          <div class="checkbox-row" style="margin-top: 8px;">
+            <label><input type="checkbox" id="i-veg" checked /> Vegetarian</label>
+            <label><input type="checkbox" id="i-spicy" /> Spicy</label>
+            <label><input type="checkbox" id="i-popular" /> Mark as Popular</label>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="addMenuItem()">Add to menu</button>
+          </div>
+        </div>
+
+        <!-- Items list -->
+        <div class="card">
+          <div class="card-title">Current menu items</div>
+          <div id="menu-items-list"><div class="empty"><div class="empty-icon">🍽️</div>Select a restaurant above to see its menu.</div></div>
+        </div>
+      </div>
+
+      <!-- ══ QR CODES ══ -->
+      <div class="page" id="page-qr-codes">
+        <div class="page-header">
+          <div class="page-title">QR Codes</div>
+          <div class="page-sub">Generate and download QR codes to give to restaurants</div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Generate a QR code</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Restaurant</label>
+              <select id="qr-restaurant-select" onchange="updateQR()">
+                <option value="">— Select a restaurant —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Table number (optional)</label>
+              <input type="number" id="qr-table" placeholder="e.g. 4" oninput="updateQR()" />
+            </div>
+          </div>
+
+          <div id="qr-output" style="display:none; margin-top: 1.25rem;">
+            <div class="qr-box">
+              <div style="font-size: 13px; color: #7a7670; margin-bottom: .5rem;">Menu URL for this QR code:</div>
+              <div class="qr-url" id="qr-url-display"></div>
+              <div class="qr-img-wrap">
+                <img id="qr-image" src="" alt="QR Code" />
+              </div>
+              <div style="display: flex; gap: 8px; justify-content: center; margin-top: 1rem; flex-wrap: wrap;">
+                <a id="qr-download" class="btn btn-primary" download="qrcode.png">Download QR PNG</a>
+                <button class="btn btn-outline" onclick="copyURL()">Copy URL</button>
+              </div>
+              <div style="font-size: 11px; color: #b0ac9e; margin-top: .75rem;">Print this QR code and place it on the table. Customers scan it to see the menu instantly.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+  </div><!-- /layout -->
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ════════════════════════════════════════════
+    //  PASTE YOUR SUPABASE CREDENTIALS HERE
+    //  (same ones you used in index.html)
+    // ════════════════════════════════════════════
+    const SUPABASE_URL = 'https://njfxurvrdyumdqqgummz.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qZnh1cnZyZHl1bWRxcWd1bW16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NTE5OTQsImV4cCI6MjA5MTIyNzk5NH0.uRM7gIRlYjTu9lmLLcjVWeJ2xx1lgZT70NRekPnqOGU';
+    // ════════════════════════════════════════════
+
+    // Your live Vercel site URL (used to build menu links)
+    // Change this to your actual Vercel URL
+    const SITE_URL = 'https://qrmenu-omega-six.vercel.app';
+
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let restaurants = [];
+
+    // ── Navigation ──
+    function showPage(name, el) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+      document.getElementById('page-' + name).classList.add('active');
+      el.classList.add('active');
+    }
+
+    // ── Toast ──
+    function toast(msg, type = '') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show ' + type;
+      setTimeout(() => t.className = 'toast', 3000);
+    }
+
+    // ── Load all restaurants ──
+    async function loadRestaurants() {
+      const { data, error } = await db.from('restaurants').select('*').order('name');
+      if (error) { toast('Error loading restaurants', 'error'); return; }
+      restaurants = data || [];
+      renderRestaurantList();
+      renderDashboard();
+      populateRestaurantSelects();
+    }
+
+    function renderRestaurantList() {
+      const el = document.getElementById('restaurant-list');
+      if (!restaurants.length) {
+        el.innerHTML = '<div class="empty"><div class="empty-icon">🏪</div>No restaurants added yet.</div>';
+        return;
+      }
+      el.innerHTML = restaurants.map(r => `
+        <div class="restaurant-item">
+          <div>
+            <div class="restaurant-name">${r.name}</div>
+            <div class="restaurant-meta">${r.city || ''} ${r.open_hours ? '· ' + r.open_hours : ''}</div>
+          </div>
+          <div class="restaurant-actions">
+            <button class="btn btn-outline btn-sm" onclick="viewMenuURL('${r.id}')">View menu</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteRestaurant('${r.id}', '${r.name.replace(/'/g,"\\'")}')">Delete</button>
+          </div>
+        </div>`).join('');
+    }
+
+    function renderDashboard() {
+      document.getElementById('stat-restaurants').textContent = restaurants.length;
+      document.getElementById('stat-qr').textContent = restaurants.length;
+
+      const el = document.getElementById('dashboard-list');
+      if (!restaurants.length) {
+        el.innerHTML = '<div class="empty"><div class="empty-icon">🍽️</div>No restaurants yet. Add your first one!</div>';
+        return;
+      }
+      el.innerHTML = restaurants.map(r => `
+        <div class="restaurant-item">
+          <div>
+            <div class="restaurant-name">${r.name}</div>
+            <div class="restaurant-meta">${r.city || ''} ${r.established ? '· ' + r.established : ''}</div>
+          </div>
+          <div class="restaurant-actions">
+            <button class="btn btn-outline btn-sm" onclick="viewMenuURL('${r.id}')">Menu URL</button>
+          </div>
+        </div>`).join('');
+    }
+
+    function populateRestaurantSelects() {
+      const opts = restaurants.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+      document.getElementById('item-restaurant-select').innerHTML = '<option value="">— Select a restaurant —</option>' + opts;
+      document.getElementById('qr-restaurant-select').innerHTML  = '<option value="">— Select a restaurant —</option>' + opts;
+    }
+
+    // ── Add restaurant ──
+    async function addRestaurant() {
+      const name = document.getElementById('r-name').value.trim();
+      const city = document.getElementById('r-city').value.trim();
+      if (!name) { toast('Please enter a restaurant name', 'error'); return; }
+      if (!city) { toast('Please enter the city', 'error'); return; }
+
+      const { error } = await db.from('restaurants').insert({
+        name,
+        city,
+        tagline:      document.getElementById('r-tagline').value.trim(),
+        open_hours:   document.getElementById('r-hours').value.trim(),
+        established:  document.getElementById('r-est').value.trim(),
+      });
+
+      if (error) { toast('Error: ' + error.message, 'error'); return; }
+
+      toast('Restaurant added successfully!', 'success');
+      ['r-name','r-city','r-tagline','r-hours','r-est'].forEach(id => document.getElementById(id).value = '');
+      loadRestaurants();
+    }
+
+    // ── Delete restaurant ──
+    async function deleteRestaurant(id, name) {
+      if (!confirm('Delete "' + name + '"? This will also delete all its menu items.')) return;
+      await db.from('menu_items').delete().eq('restaurant_id', id);
+      const { error } = await db.from('restaurants').delete().eq('id', id);
+      if (error) { toast('Error deleting', 'error'); return; }
+      toast('Deleted ' + name, 'success');
+      loadRestaurants();
+    }
+
+    // ── View menu URL ──
+    function viewMenuURL(id) {
+      const url = SITE_URL + '?restaurant=' + id;
+      window.open(url, '_blank');
+    }
+
+    // ── Load menu items for selected restaurant ──
+    async function loadMenuItems() {
+      const restaurantId = document.getElementById('item-restaurant-select').value;
+      const el = document.getElementById('menu-items-list');
+      if (!restaurantId) {
+        el.innerHTML = '<div class="empty"><div class="empty-icon">🍽️</div>Select a restaurant above to see its menu.</div>';
+        document.getElementById('stat-items').textContent = '—';
+        return;
+      }
+
+      const { data, error } = await db.from('menu_items').select('*').eq('restaurant_id', restaurantId).order('category');
+      if (error) { toast('Error loading items', 'error'); return; }
+
+      document.getElementById('stat-items').textContent = data.length;
+
+      if (!data.length) {
+        el.innerHTML = '<div class="empty"><div class="empty-icon">🍽️</div>No items yet. Add some above!</div>';
+        return;
+      }
+
+      const catLabels = { starters: 'Starters', mains: 'Mains', breads: 'Breads & Rice', drinks: 'Drinks', desserts: 'Desserts' };
+      let html = '';
+      let lastCat = '';
+      data.forEach(item => {
+        if (item.category !== lastCat) {
+          if (lastCat) html += '</div>';
+          html += `<div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#b0ac9e;padding:10px 0 4px;font-weight:500;">${catLabels[item.category] || item.category}</div><div>`;
+          lastCat = item.category;
+        }
+        const tags = [];
+        if (item.is_veg)     tags.push('<span style="font-size:10px;background:#e8f5e2;color:#2d6e1a;padding:1px 6px;border-radius:8px;">Veg</span>');
+        if (!item.is_veg)    tags.push('<span style="font-size:10px;background:#fdecea;color:#922020;padding:1px 6px;border-radius:8px;">Non-veg</span>');
+        if (item.is_spicy)   tags.push('<span style="font-size:10px;background:#fdeee6;color:#8a3010;padding:1px 6px;border-radius:8px;">Spicy</span>');
+        if (item.is_popular) tags.push('<span style="font-size:10px;background:#fef3dd;color:#7a4e0a;padding:1px 6px;border-radius:8px;">Popular</span>');
+        html += `
+          <div class="menu-item-row">
+            <div class="menu-item-emoji">${item.emoji || '🍽️'}</div>
+            <div class="menu-item-info">
+              <div class="menu-item-name">${item.name} &nbsp;${tags.join(' ')}</div>
+              <div class="menu-item-meta">${item.description || ''}</div>
+            </div>
+            <div class="menu-item-price">₹${item.price}</div>
+            <button class="btn btn-danger btn-sm" onclick="deleteItem('${item.id}', '${item.name.replace(/'/g,"\\'")}')">✕</button>
+          </div>`;
+      });
+      if (lastCat) html += '</div>';
+      el.innerHTML = html;
+    }
+
+    // ── Add menu item ──
+    async function addMenuItem() {
+      const restaurantId = document.getElementById('item-restaurant-select').value;
+      if (!restaurantId) { toast('Please select a restaurant first', 'error'); return; }
+
+      const name = document.getElementById('i-name').value.trim();
+      const price = parseInt(document.getElementById('i-price').value);
+      if (!name)       { toast('Please enter a dish name', 'error'); return; }
+      if (!price || price < 1) { toast('Please enter a valid price', 'error'); return; }
+
+      const { error } = await db.from('menu_items').insert({
+        restaurant_id: restaurantId,
+        name,
+        price,
+        category:    document.getElementById('i-category').value,
+        description: document.getElementById('i-desc').value.trim(),
+        emoji:       document.getElementById('i-emoji').value.trim() || '🍽️',
+        is_veg:      document.getElementById('i-veg').checked,
+        is_spicy:    document.getElementById('i-spicy').checked,
+        is_popular:  document.getElementById('i-popular').checked,
+      });
+
+      if (error) { toast('Error: ' + error.message, 'error'); return; }
+
+      toast(name + ' added!', 'success');
+      ['i-name','i-price','i-desc','i-emoji'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('i-veg').checked     = true;
+      document.getElementById('i-spicy').checked   = false;
+      document.getElementById('i-popular').checked = false;
+      loadMenuItems();
+    }
+
+    // ── Delete menu item ──
+    async function deleteItem(id, name) {
+      if (!confirm('Remove "' + name + '" from the menu?')) return;
+      const { error } = await db.from('menu_items').delete().eq('id', id);
+      if (error) { toast('Error deleting', 'error'); return; }
+      toast(name + ' removed', 'success');
+      loadMenuItems();
+    }
+
+    // ── QR Code generation ──
+    function updateQR() {
+      const restaurantId = document.getElementById('qr-restaurant-select').value;
+      if (!restaurantId) { document.getElementById('qr-output').style.display = 'none'; return; }
+
+      const tableNum = document.getElementById('qr-table').value;
+      let url = SITE_URL + '?restaurant=' + restaurantId;
+      if (tableNum) url += '&table=' + tableNum;
+
+      // Use QR Server API (free, no account needed)
+      const qrApiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=' + encodeURIComponent(url);
+
+      document.getElementById('qr-url-display').textContent = url;
+      document.getElementById('qr-image').src = qrApiUrl;
+      document.getElementById('qr-download').href = qrApiUrl + '&format=png';
+      document.getElementById('qr-output').style.display = 'block';
+    }
+
+    function copyURL() {
+      const url = document.getElementById('qr-url-display').textContent;
+      navigator.clipboard.writeText(url).then(() => toast('URL copied!', 'success'));
+    }
+
+    // ── RLS write policies (run once in Supabase SQL editor if you get errors) ──
+    // CREATE POLICY "Public insert restaurants" ON restaurants FOR INSERT WITH CHECK (true);
+    // CREATE POLICY "Public insert menu_items" ON menu_items FOR INSERT WITH CHECK (true);
+    // CREATE POLICY "Public delete restaurants" ON restaurants FOR DELETE USING (true);
+    // CREATE POLICY "Public delete menu_items" ON menu_items FOR DELETE USING (true);
+
+    // ── Init ──
+    loadRestaurants();
+  </script>
+</body>
+</html>
