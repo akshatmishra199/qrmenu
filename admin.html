@@ -387,16 +387,30 @@
     }).join('');
   }
 
-  function linkOwner() {
-    const email = document.getElementById('o-email').value.trim();
-    const rid   = document.getElementById('o-rsel').value;
-    const rname = restaurants.find(r=>r.id===rid)?.name || '';
-    if (!email||!rid) { toast('Email and restaurant required','error'); return; }
-    const sql = `INSERT INTO profiles (id, role, restaurant_id)\nSELECT id, 'owner', '${rid}'\nFROM auth.users\nWHERE email = '${email}';`;
-    navigator.clipboard.writeText(sql).then(()=>{
-      toast('SQL copied! Paste it in Supabase → SQL Editor and run it.','success');
-    });
-  }
+  async function linkOwner() {
+  const rid = document.getElementById('o-rsel').value;
+  if (!rid) { toast('Select a restaurant first', 'error'); return; }
+
+  // Generate a random token
+  const token = Math.random().toString(36).substring(2,10) +
+                Math.random().toString(36).substring(2,10);
+
+  // Save token to database
+  const {error} = await db.from('signup_tokens').insert({
+    token,
+    restaurant_id: rid,
+    used: false
+  });
+
+  if (error) { toast(error.message, 'error'); return; }
+
+  // Show the signup link
+  const link = SITE_URL + '/owner-signup.html?token=' + token;
+  navigator.clipboard.writeText(link);
+  toast('Signup link copied! Send it to the owner.', 'success');
+  alert('Owner signup link (also copied to clipboard):\n\n' + link +
+        '\n\nSend this link to the restaurant owner. It expires after one use.');
+}
 
   function updateQR() {
     const id = document.getElementById('qr-rsel').value;
